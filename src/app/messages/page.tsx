@@ -35,38 +35,39 @@ function getMessagesForChatStream(chatId: string, callback: (messages: Message[]
     return unsubscribe; // Return the unsubscribe function to be called on cleanup
 }
 
-
 export default function MessagesPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<Map<string, User>>(new Map());
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // 1. Fetch current user and all other users once
   useEffect(() => {
-    async function fetchUser() {
+    async function loadInitialData() {
       const user = await getCurrentUser();
       setCurrentUser(user);
+      
+      const usersList = await getAllUsers();
+      setAllUsers(new Map(usersList.map(u => [u.id, u])));
     }
-    fetchUser();
+    loadInitialData();
   }, []);
 
+  // 2. Set up real-time listener for chats when user and user list are available
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || allUsers.size === 0) return;
 
-    // Set up real-time listener for chats
     const chatCollection = collection(db, 'chats');
     const q = query(chatCollection, where('participantIds', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
 
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        const allUsers = await getAllUsers();
-        const userMap = new Map(allUsers.map(u => [u.id, u]));
-
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const chatsData = querySnapshot.docs.map(doc => {
             const data = doc.data();
             const participants: User[] = data.participantIds
-                .map((pId: string) => userMap.get(pId))
+                .map((pId: string) => allUsers.get(pId))
                 .filter((user: User | undefined): user is User => user !== undefined);
             
             return {
@@ -82,9 +83,10 @@ export default function MessagesPage() {
 
     // Clean up the listener when the component unmounts or user changes
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, allUsers]);
 
 
+  // 3. Set up listener for messages in the active chat
   useEffect(() => {
     if (activeChat) {
       const unsubscribe = getMessagesForChatStream(activeChat.id, setMessages);
@@ -92,10 +94,10 @@ export default function MessagesPage() {
     }
   }, [activeChat]);
 
+  // 4. Scroll to bottom when new messages arrive
   useEffect(() => {
-    // Scroll to the bottom of the messages when new messages arrive
     if (scrollAreaRef.current) {
-        const scrollDiv = (scrollAreaRef.current.children[0] as HTMLElement).children[0] as HTMLElement;
+        const scrollDiv = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
         if (scrollDiv) {
              scrollDiv.scrollTo({ top: scrollDiv.scrollHeight, behavior: 'smooth' });
         }
