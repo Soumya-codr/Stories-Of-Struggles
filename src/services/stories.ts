@@ -3,15 +3,26 @@
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 
+// This defines the shape of a user object.
+// We export it so it can be used in other parts of the app.
+export type User = {
+    id: string;
+    name: string;
+    username: string;
+    avatarUrl: string;
+    bio?: string;
+    website?: string;
+    followers?: number;
+    following?: number;
+};
+
+
 // NOTE: This is a placeholder for the real user data
 // In a real app, you would get this from your authentication system
-export const getCurrentUser = async () => {
-    return {
-        id: 'user123',
-        name: 'Developer',
-        username: 'developer',
-        avatar: 'https://placehold.co/40x40.png'
-    };
+export const getCurrentUser = async (): Promise<User> => {
+    // For now, we'll return the 'developer' user by default.
+    const user = await getUserByUsername('developer');
+    return user!;
 };
 
 export async function createStory(data: any) {
@@ -27,7 +38,7 @@ export async function createStory(data: any) {
                 id: user.id,
                 name: user.name,
                 username: user.username,
-                avatarUrl: user.avatar,
+                avatarUrl: user.avatarUrl,
             },
             title: data.title,
             description: data.description,
@@ -58,7 +69,6 @@ export async function getStories() {
         return {
             id: doc.id,
             ...data,
-            // Convert Firestore Timestamp to a serializable format
             createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
         }
     });
@@ -81,9 +91,9 @@ export async function getStoryById(id: string) {
     }
 }
 
-// NOTE: This is a placeholder user lookup.
-// In a real app, you would have a 'users' collection.
-const users = [
+// NOTE: This is a placeholder user database.
+// In a real app, you would have a 'users' collection in Firestore.
+const users: User[] = [
     {
       id: 'user123',
       name: 'Developer',
@@ -103,17 +113,30 @@ const users = [
       website: 'https://example.com',
       followers: 482,
       following: 120,
+    },
+    {
+        id: 'sarah',
+        name: 'Sarah',
+        username: 'sarah',
+        avatarUrl: 'https://placehold.co/128x128.png'
+    },
+    {
+        id: 'mike',
+        name: 'Mike',
+        username: 'mike',
+        avatarUrl: 'https://placehold.co/128x128.png'
     }
 ];
 
-export async function getUserByUsername(username: string) {
+export async function getAllUsers(): Promise<User[]> {
+    // This function returns all users from our placeholder data.
+    // In a real application, you would fetch this from your 'users' collection.
+    return users;
+}
+
+
+export async function getUserByUsername(username: string): Promise<User | null> {
     // In a real app, this would query a 'users' collection in Firestore
-    // const q = query(collection(db, "users"), where("username", "==", username));
-    // const querySnapshot = await getDocs(q);
-    // if (!querySnapshot.empty) {
-    //    const doc = querySnapshot.docs[0];
-    //    return { id: doc.id, ...doc.data() };
-    // }
     return users.find(u => u.username === username) || null;
 }
 
