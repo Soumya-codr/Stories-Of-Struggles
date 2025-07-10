@@ -1,3 +1,4 @@
+
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "../ui/separator"
+import { Upload } from "lucide-react"
 
 const newStoryFormSchema = z.object({
   title: z.string().min(5, {
@@ -33,6 +35,8 @@ const newStoryFormSchema = z.object({
   projectUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   sourceCodeUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  videoUrl: z.string().url({ message: "Please enter a valid video URL." }).optional().or(z.literal('')),
+  behindTheScenes: z.any().optional(),
 })
 
 type NewStoryFormValues = z.infer<typeof newStoryFormSchema>
@@ -49,6 +53,7 @@ export function NewStoryForm() {
         projectUrl: "",
         sourceCodeUrl: "",
         imageUrl: "",
+        videoUrl: "",
     },
     mode: "onChange",
   })
@@ -171,6 +176,52 @@ export function NewStoryForm() {
               <FormMessage />
             </FormItem>
           )}
+        />
+         <FormField
+            control={form.control}
+            name="videoUrl"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Video URL</FormLabel>
+                    <FormControl>
+                        <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                    </FormControl>
+                    <FormDescription>
+                        A link to a video about your project (YouTube, Vimeo, etc.).
+                    </FormDescription>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
+        <FormField
+            control={form.control}
+            name="behindTheScenes"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Behind-the-Scenes Images</FormLabel>
+                    <FormControl>
+                        <div className="relative">
+                            <Input
+                                type="file"
+                                multiple
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                onChange={(e) => field.onChange(e.target.files)}
+                            />
+                            <div className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg border-muted hover:bg-muted/50 transition-colors">
+                                <div className="text-center">
+                                    <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                                    <p className="mt-2 text-sm text-muted-foreground">Click or drag to upload images</p>
+                                    <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
+                                </div>
+                            </div>
+                        </div>
+                    </FormControl>
+                    <FormDescription>
+                        Share some screenshots, mockups, or photos from your journey.
+                    </FormDescription>
+                    <FormMessage />
+                </FormItem>
+            )}
         />
          <FormField
           control={form.control}
