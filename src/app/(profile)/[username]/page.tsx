@@ -5,64 +5,20 @@ import ProjectCard from "@/components/projects/project-card";
 import { Mail, Link as LinkIcon, Edit } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getStoriesByUsername, getUserByUsername, getCurrentUser } from "@/services/stories";
 
-// Mock data - in a real app, this would come from a database
-const users = [
-    {
-      name: 'Alex Doe',
-      username: 'alexdoe',
-      avatarUrl: 'https://placehold.co/128x128.png',
-      bio: 'Senior Software Engineer, passionate about open source, clean code, and building communities. Currently working on Project Phoenix.',
-      website: 'https://example.com',
-      followers: 482,
-      following: 120,
-      isCurrentUser: false,
-    },
-    {
-      name: 'Developer',
-      username: 'developer',
-      avatarUrl: 'https://placehold.co/128x128.png',
-      bio: 'This is your profile! Share your story, showcase your projects, and connect with other developers.',
-      website: 'https://example.com',
-      followers: 10,
-      following: 25,
-      isCurrentUser: true,
-    }
-];
-
-const allProjects = [
-  {
-    id: '1',
-    title: 'Project Phoenix',
-    description: 'A journey of rebuilding a legacy system from scratch. Full of unexpected turns and valuable lessons in team collaboration.',
-    author: { name: 'Alex Doe', avatarUrl: 'https://placehold.co/40x40.png', username: 'alexdoe' },
-    imageUrl: 'https://placehold.co/600x400.png',
-    dataAiHint: 'abstract tech',
-    tags: ['React', 'Node.js', 'Refactoring'],
-    upvotes: 128,
-    comments: 23,
-  },
-   {
-    id: '5',
-    title: 'Component Library',
-    description: 'The story behind building our internal component library. A deep dive into design systems and developer experience.',
-    author: { name: 'Alex Doe', avatarUrl: 'https://placehold.co/40x40.png', username: 'alexdoe' },
-    imageUrl: 'https://placehold.co/600x400.png',
-    dataAiHint: 'design system',
-    tags: ['React', 'DesignSystem', 'DX'],
-    upvotes: 98,
-    comments: 15,
-  },
-];
-
-
-export default function ProfilePage({ params }: { params: { username: string } }) {
-  const user = users.find(u => u.username === params.username);
-  const userProjects = allProjects.filter(p => p.author.username === params.username);
+export default async function ProfilePage({ params }: { params: { username: string } }) {
+  const [user, userProjects, currentUser] = await Promise.all([
+    getUserByUsername(params.username),
+    getStoriesByUsername(params.username),
+    getCurrentUser()
+  ]);
 
   if (!user) {
     notFound();
   }
+
+  const isCurrentUser = user.username === currentUser?.username;
 
   return (
     <div className="container mx-auto py-8">
@@ -81,7 +37,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
                 <p className="mt-2 max-w-prose">{user.bio}</p>
               </div>
               <div className="flex items-center justify-center md:justify-start gap-2 mt-4 flex-shrink-0">
-                  {user.isCurrentUser ? (
+                  {isCurrentUser ? (
                       <Button asChild><Link href="/settings"><Edit className="mr-2 h-4 w-4" /> Edit Profile</Link></Button>
                   ) : (
                     <>
@@ -89,11 +45,13 @@ export default function ProfilePage({ params }: { params: { username: string } }
                       <Button variant="outline"><Mail className="mr-2 h-4 w-4" /> Message</Button>
                     </>
                   )}
-                  <Button variant="ghost" size="icon" asChild>
-                    <a href={user.website} target="_blank" rel="noopener noreferrer">
-                        <LinkIcon className="h-5 w-5" />
-                    </a>
-                  </Button>
+                  {user.website && (
+                    <Button variant="ghost" size="icon" asChild>
+                      <a href={user.website} target="_blank" rel="noopener noreferrer">
+                          <LinkIcon className="h-5 w-5" />
+                      </a>
+                    </Button>
+                  )}
               </div>
             </div>
             <div className="flex items-center justify-center md:justify-start gap-4 mt-4">
@@ -123,9 +81,9 @@ export default function ProfilePage({ params }: { params: { username: string } }
             <CardContent>
               <h3 className="text-xl font-semibold">No Stories Yet</h3>
               <p className="text-muted-foreground mt-2">
-                {user.isCurrentUser ? "You haven't shared any stories. Why not share your first?" : `${user.name} hasn't shared any stories yet.`}
+                {isCurrentUser ? "You haven't shared any stories. Why not share your first?" : `${user.name} hasn't shared any stories yet.`}
               </p>
-              {user.isCurrentUser && (
+              {isCurrentUser && (
                 <Button asChild className="mt-4">
                   <Link href="/new-story">Share a Story</Link>
                 </Button>

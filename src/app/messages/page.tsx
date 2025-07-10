@@ -5,19 +5,15 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { Search, Send } from "lucide-react"
 
+// This page remains with dummy data for now, as messaging functionality is complex to implement.
 const contacts = [
   { name: "Alex Doe", lastMessage: "Let's sync up tomorrow.", time: "10:42 AM", avatar: "https://placehold.co/40x40.png", active: true },
   { name: "Jane Smith", lastMessage: "Can you review my PR?", time: "9:15 AM", avatar: "https://placehold.co/40x40.png" },
-  { name: "Phoenix Core Team", lastMessage: "Staging deployment is complete.", time: "Yesterday", avatar: "https://placehold.co/40x40.png" },
-  { name: "Maria Garcia", lastMessage: "That's a great idea!", time: "2d", avatar: "https://placehold.co/40x40.png" },
 ];
 
 const messages = [
     { sender: "Alex Doe", text: "Hey! Just read your new story on Project Phoenix. Really inspiring stuff.", time: "10:30 AM", isOwn: false, avatar: "https://placehold.co/40x40.png" },
     { sender: "You", text: "Thanks, Alex! Appreciate you reading it.", time: "10:31 AM", isOwn: true, avatar: "https://placehold.co/40x40.png" },
-    { sender: "Alex Doe", text: "The part about the data migration hell really hit home haha. We had a similar nightmare.", time: "10:32 AM", isOwn: false, avatar: "https://placehold.co/40x40.png" },
-    { sender: "You", text: "Haha, seems like a rite of passage for any rebuild. Glad we're past it!", time: "10:35 AM", isOwn: true, avatar: "https://placehold.co/40x40.png" },
-    { sender: "Alex Doe", text: "For sure. Anyway, great work. Let's sync up tomorrow about the component library.", time: "10:42 AM", isOwn: false, avatar: "https://placehold.co/40x40.png" },
 ];
 
 export default function MessagesPage() {

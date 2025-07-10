@@ -1,11 +1,11 @@
 'use server';
 
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 
 // NOTE: This is a placeholder for the real user data
 // In a real app, you would get this from your authentication system
-const getCurrentUser = async () => {
+export const getCurrentUser = async () => {
     return {
         id: 'user123',
         name: 'Developer',
@@ -38,7 +38,7 @@ export async function createStory(data: any) {
             imageUrl: data.imageUrl || '',
             videoUrl: data.videoUrl || '',
             upvotes: 0,
-            commentsCount: 0,
+            comments: 0,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
@@ -48,4 +48,85 @@ export async function createStory(data: any) {
         console.error("Error adding document: ", e);
         return { success: false, error: "Failed to create story." };
     }
+}
+
+export async function getStories() {
+    const storiesCol = collection(db, 'stories');
+    const storySnapshot = await getDocs(storiesCol);
+    const storyList = storySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            // Convert Firestore Timestamp to a serializable format
+            createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+        }
+    });
+    return storyList as any[];
+}
+
+export async function getStoryById(id: string) {
+    const storyDoc = doc(db, 'stories', id);
+    const storySnapshot = await getDoc(storyDoc);
+
+    if (storySnapshot.exists()) {
+        const data = storySnapshot.data();
+        return {
+            id: storySnapshot.id,
+            ...data,
+            createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+        } as any;
+    } else {
+        return null;
+    }
+}
+
+// NOTE: This is a placeholder user lookup.
+// In a real app, you would have a 'users' collection.
+const users = [
+    {
+      id: 'user123',
+      name: 'Developer',
+      username: 'developer',
+      avatarUrl: 'https://placehold.co/128x128.png',
+      bio: 'This is your profile! Share your story, showcase your projects, and connect with other developers.',
+      website: 'https://example.com',
+      followers: 10,
+      following: 25,
+    },
+     {
+      id: 'alexdoe456',
+      name: 'Alex Doe',
+      username: 'alexdoe',
+      avatarUrl: 'https://placehold.co/128x128.png',
+      bio: 'Senior Software Engineer, passionate about open source, clean code, and building communities. Currently working on Project Phoenix.',
+      website: 'https://example.com',
+      followers: 482,
+      following: 120,
+    }
+];
+
+export async function getUserByUsername(username: string) {
+    // In a real app, this would query a 'users' collection in Firestore
+    // const q = query(collection(db, "users"), where("username", "==", username));
+    // const querySnapshot = await getDocs(q);
+    // if (!querySnapshot.empty) {
+    //    const doc = querySnapshot.docs[0];
+    //    return { id: doc.id, ...doc.data() };
+    // }
+    return users.find(u => u.username === username) || null;
+}
+
+export async function getStoriesByUsername(username: string) {
+    const q = query(collection(db, "stories"), where("author.username", "==", username));
+    const querySnapshot = await getDocs(q);
+    const storyList = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+        }
+    });
+    return storyList as any[];
 }

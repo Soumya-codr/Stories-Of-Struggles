@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, PlusCircle } from "lucide-react";
 
+// This page remains with dummy data for now, as team functionality is complex to implement.
 const teams = [
   { id: 1, name: "Phoenix Core", members: 5, avatar: "https://placehold.co/40x40.png" },
   { id: 2, name: "Indie Gamers", members: 2, avatar: "https://placehold.co/40x40.png" },
-  { id: 3, name: "OSS Maintainers", members: 12, avatar: "https://placehold.co/40x40.png" },
 ];
 
 export default function TeamsPage() {

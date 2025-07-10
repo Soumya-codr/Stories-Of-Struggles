@@ -35,11 +35,11 @@ export default function ProjectCard({ project }: { project: Project }) {
       <Link href={`/projects/${project.id}`} className="block">
         <div className="relative h-48 w-full">
           <Image
-            src={project.imageUrl}
+            src={project.imageUrl || 'https://placehold.co/600x400.png'}
             alt={project.title}
             fill
             className="object-cover"
-            data-ai-hint={project.dataAiHint}
+            data-ai-hint={project.dataAiHint || 'abstract tech'}
           />
         </div>
       </Link>

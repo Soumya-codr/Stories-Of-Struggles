@@ -22,6 +22,7 @@ import { Separator } from "../ui/separator"
 import { Upload } from "lucide-react"
 import { createStory } from "@/services/stories"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 const newStoryFormSchema = z.object({
   title: z.string().min(5, {
@@ -45,6 +46,7 @@ type NewStoryFormValues = z.infer<typeof newStoryFormSchema>
 
 export function NewStoryForm() {
   const { toast } = useToast()
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<NewStoryFormValues>({
     resolver: zodResolver(newStoryFormSchema),
@@ -73,6 +75,8 @@ export function NewStoryForm() {
                 description: "Your project story is now live for the community to see.",
             });
             form.reset();
+            // Redirect to the new story page
+            router.push(`/projects/${result.id}`);
         } else {
             throw new Error(result.error || "An unknown error occurred.");
         }
@@ -143,7 +147,7 @@ export function NewStoryForm() {
                 />
               </FormControl>
               <FormDescription>
-                You can use Markdown for formatting.
+                You can use Markdown for formatting. HTML is also supported.
               </FormDescription>
               <FormMessage />
             </FormItem>
