@@ -36,9 +36,9 @@ export async function createChat(user1Id: string, user2Id: string): Promise<stri
     const chatCollection = collection(db, 'chats');
     
     // Check if a chat between these two users already exists
-    const q = query(chatCollection, where('participantIds', 'array-contains', user1Id));
+    const q = query(chatCollection, where('participantids', 'array-contains', user1Id));
     const querySnapshot = await getDocs(q);
-    const existingChatDoc = querySnapshot.docs.find(d => d.data().participantIds.includes(user2Id));
+    const existingChatDoc = querySnapshot.docs.find(d => d.data().participantids.includes(user2Id));
 
     if (existingChatDoc) {
         return existingChatDoc.id;
@@ -46,7 +46,7 @@ export async function createChat(user1Id: string, user2Id: string): Promise<stri
 
     // If no chat exists, create a new one
     const newChatRef = await addDoc(chatCollection, {
-        participantIds: [user1Id, user2Id],
+        participantids: [user1Id, user2Id],
         lastMessage: "Chat created",
         lastMessageTimestamp: serverTimestamp(),
     });
@@ -58,7 +58,7 @@ export async function createChat(user1Id: string, user2Id: string): Promise<stri
 // Function to get all chats for a specific user
 export async function getChatsForUser(userId: string): Promise<Chat[]> {
     const chatCollection = collection(db, 'chats');
-    const q = query(chatCollection, where('participantIds', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
+    const q = query(chatCollection, where('participantids', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
 
     const querySnapshot = await getDocs(q);
     const chats: Chat[] = [];
@@ -71,13 +71,13 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
         const data = doc.data();
         
         // Populate participant details from the user map
-        const participants: User[] = data.participantIds
+        const participants: User[] = data.participantids
             .map((pId: string) => userMap.get(pId))
             .filter((user: User | undefined): user is User => user !== undefined);
 
         chats.push({
             id: doc.id,
-            participantIds: data.participantIds,
+            participantIds: data.participantids,
             participants: participants,
             lastMessage: data.lastMessage,
             lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),

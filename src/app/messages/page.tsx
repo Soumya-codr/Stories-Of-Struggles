@@ -62,7 +62,7 @@ export default function MessagesPage() {
     if (!currentUser || allUsers.size === 0) return;
 
     const chatCollection = collection(db, 'chats');
-    const q = query(chatCollection, where('participantIds', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
+    const q = query(chatCollection, where('participantids', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const chatsData = querySnapshot.docs.map(doc => {
