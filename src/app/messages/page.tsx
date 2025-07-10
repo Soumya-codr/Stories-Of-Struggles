@@ -8,16 +8,16 @@ import { cn } from "@/lib/utils"
 import { Search, Send, MessageSquare, PlusCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { useEffect, useState, useRef } from "react";
-import { getCurrentUser } from "@/services/stories";
-import { sendMessage, getChatsForUserStream, type Chat, type Message } from "@/services/chat";
+import { getCurrentUser, getAllUsers } from "@/services/stories";
+import { sendMessage, getChatsForUser, type Chat, type Message } from "@/services/chat";
 import Link from "next/link";
 import { type User } from "@/services/stories";
-import { collection, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, Timestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 
 // This function is for CLIENT-SIDE use only, as it sets up a real-time listener.
-function getMessagesForChat(chatId: string, callback: (messages: Message[]) => void) {
+function getMessagesForChatStream(chatId: string, callback: (messages: Message[]) => void) {
     const messagesCollection = collection(db, 'chats', chatId, 'messages');
     const q = query(messagesCollection, orderBy('createdAt', 'asc'));
 
@@ -32,6 +32,34 @@ function getMessagesForChat(chatId: string, callback: (messages: Message[]) => v
     });
 
     return unsubscribe; // Return the unsubscribe function to be called on cleanup
+}
+
+function getChatsForUserStream(userId: string, callback: (chats: Chat[]) => void) {
+    const chatCollection = collection(db, 'chats');
+    const q = query(chatCollection, where('participantIds', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        const allUsers = await getAllUsers();
+        const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+        const chats = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const participants: User[] = data.participantIds
+                .map((pId: string) => userMap.get(pId))
+                .filter((user: User | undefined): user is User => user !== undefined);
+            
+            return {
+                id: doc.id,
+                participantIds: data.participantIds,
+                participants: participants,
+                lastMessage: data.lastMessage,
+                lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
+            };
+        });
+        callback(chats);
+    });
+
+    return unsubscribe;
 }
 
 
@@ -64,7 +92,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (activeChat) {
-      const unsubscribe = getMessagesForChat(activeChat.id, setMessages);
+      const unsubscribe = getMessagesForChatStream(activeChat.id, setMessages);
       return () => unsubscribe();
     }
   }, [activeChat]);
