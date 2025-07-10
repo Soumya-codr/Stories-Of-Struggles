@@ -66,7 +66,7 @@ export default function MessagesPage() {
     const chatCollection = collection(db, 'chats');
     // NOTE: This query requires a composite index in Firestore.
     // The error message in the console will provide a direct link to create it.
-    const q = query(chatCollection, where('participantIds', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
+    const q = query(chatCollection, where('participantIds', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'asc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const chatsData = querySnapshot.docs.map(doc => {
