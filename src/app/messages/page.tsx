@@ -6,15 +6,13 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { Search, Send, MessageSquare, PlusCircle } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
 import { useEffect, useState, useRef } from "react";
 import { getCurrentUser, getAllUsers } from "@/services/stories";
-import { sendMessage, getChatsForUser, type Chat, type Message } from "@/services/chat";
+import { sendMessage, type Chat, type Message } from "@/services/chat";
 import Link from "next/link";
 import { type User } from "@/services/stories";
 import { collection, query, orderBy, onSnapshot, Timestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
 
 // This function is for CLIENT-SIDE use only, as it sets up a real-time listener.
 function getMessagesForChatStream(chatId: string, callback: (messages: Message[]) => void) {
@@ -22,44 +20,19 @@ function getMessagesForChatStream(chatId: string, callback: (messages: Message[]
     const q = query(messagesCollection, orderBy('createdAt', 'asc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const messages = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            text: doc.data().text,
-            senderId: doc.data().senderId,
-            createdAt: (doc.data().createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-        }));
+        const messages = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                text: data.text,
+                senderId: data.senderId,
+                createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+            };
+        });
         callback(messages);
     });
 
     return unsubscribe; // Return the unsubscribe function to be called on cleanup
-}
-
-function getChatsForUserStream(userId: string, callback: (chats: Chat[]) => void) {
-    const chatCollection = collection(db, 'chats');
-    const q = query(chatCollection, where('participantIds', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
-
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        const allUsers = await getAllUsers();
-        const userMap = new Map(allUsers.map(u => [u.id, u]));
-
-        const chats = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const participants: User[] = data.participantIds
-                .map((pId: string) => userMap.get(pId))
-                .filter((user: User | undefined): user is User => user !== undefined);
-            
-            return {
-                id: doc.id,
-                participantIds: data.participantIds,
-                participants: participants,
-                lastMessage: data.lastMessage,
-                lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
-            };
-        });
-        callback(chats);
-    });
-
-    return unsubscribe;
 }
 
 
@@ -83,7 +56,29 @@ export default function MessagesPage() {
     if (!currentUser) return;
 
     // Set up real-time listener for chats
-    const unsubscribe = getChatsForUserStream(currentUser.id, setChats);
+    const chatCollection = collection(db, 'chats');
+    const q = query(chatCollection, where('participantIds', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        const allUsers = await getAllUsers();
+        const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+        const chatsData = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const participants: User[] = data.participantIds
+                .map((pId: string) => userMap.get(pId))
+                .filter((user: User | undefined): user is User => user !== undefined);
+            
+            return {
+                id: doc.id,
+                participantIds: data.participantIds,
+                participants: participants,
+                lastMessage: data.lastMessage,
+                lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
+            };
+        });
+        setChats(chatsData);
+    });
 
     // Clean up the listener when the component unmounts or user changes
     return () => unsubscribe();
@@ -100,7 +95,10 @@ export default function MessagesPage() {
   useEffect(() => {
     // Scroll to the bottom of the messages when new messages arrive
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+        const scrollDiv = (scrollAreaRef.current.children[0] as HTMLElement).children[0] as HTMLElement;
+        if (scrollDiv) {
+             scrollDiv.scrollTo({ top: scrollDiv.scrollHeight, behavior: 'smooth' });
+        }
     }
   }, [messages]);
 
