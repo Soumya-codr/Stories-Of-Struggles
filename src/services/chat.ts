@@ -1,4 +1,3 @@
-
 'use server';
 
 import { db } from "@/lib/firebase";
@@ -7,17 +6,14 @@ import {
     addDoc, 
     serverTimestamp, 
     getDocs, 
-    doc, 
-    getDoc, 
+    doc,
     query, 
     where,
     orderBy,
-    onSnapshot,
     updateDoc,
-    limit,
     Timestamp,
 } from "firebase/firestore";
-import { User, getUserByUsername } from "./stories";
+import { User, getAllUsers } from "./stories";
 
 // Define TypeScript interfaces for our chat data
 export interface Chat {
@@ -67,27 +63,24 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
     const querySnapshot = await getDocs(q);
     const chats: Chat[] = [];
 
+    // Fetch all users once to avoid multiple lookups in the loop
+    const allUsers = await getAllUsers();
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+
     for (const doc of querySnapshot.docs) {
         const data = doc.data();
         
-        // Fetch participant details
-        const participants: User[] = [];
-        for (const pId of data.participantIds) {
-            // NOTE: In a real app with a 'users' collection, you'd fetch by ID.
-            // Here, we find them in our dummy user list.
-            const allUsers = await require('./stories').getAllUsers();
-            const user = allUsers.find((u: User) => u.id === pId);
-            if (user) {
-                participants.push(user);
-            }
-        }
+        // Populate participant details from the user map
+        const participants: User[] = data.participantIds
+            .map((pId: string) => userMap.get(pId))
+            .filter((user: User | undefined): user is User => user !== undefined);
 
         chats.push({
             id: doc.id,
             participantIds: data.participantIds,
             participants: participants,
             lastMessage: data.lastMessage,
-            lastMessageTimestamp: data.lastMessageTimestamp?.toDate().toISOString(),
+            lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
         });
     }
 
@@ -109,23 +102,4 @@ export async function sendMessage(chatId: string, senderId: string, text: string
         lastMessage: text,
         lastMessageTimestamp: serverTimestamp(),
     });
-}
-
-// This function is for CLIENT-SIDE use only, as it sets up a real-time listener.
-// It is not a Server Action.
-export function getMessagesForChat(chatId: string, callback: (messages: Message[]) => void) {
-    const messagesCollection = collection(db, 'chats', chatId, 'messages');
-    const q = query(messagesCollection, orderBy('createdAt', 'asc'));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const messages = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            text: doc.data().text,
-            senderId: doc.data().senderId,
-            createdAt: (doc.data().createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-        }));
-        callback(messages);
-    });
-
-    return unsubscribe; // Return the unsubscribe function to be called on cleanup
 }
