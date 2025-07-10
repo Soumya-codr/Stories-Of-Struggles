@@ -51,15 +51,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="sr-only">{label}</span>
           </Link>
         </TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
+        <TooltipContent side="right" className="glass">{label}</TooltipContent>
       </Tooltip>
     );
   };
   
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen w-full flex-col bg-muted/40">
-        <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+      <div className="flex min-h-screen w-full flex-col">
+        <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background/80 backdrop-blur-md sm:flex">
           <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
             <Link
               href="/"
@@ -81,12 +81,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <span className="sr-only">New Story</span>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">New Story</TooltipContent>
+              <TooltipContent side="right" className="glass">New Story</TooltipContent>
             </Tooltip>
           </nav>
         </aside>
         <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <Sheet>
               <SheetTrigger asChild>
                 <Button size="icon" variant="outline" className="sm:hidden">
@@ -94,7 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <span className="sr-only">Toggle Menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="sm:max-w-xs">
+              <SheetContent side="left" className="sm:max-w-xs glass">
                 <nav className="grid gap-6 text-lg font-medium">
                   <Link
                     href="/"
