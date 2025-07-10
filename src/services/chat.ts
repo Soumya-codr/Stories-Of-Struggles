@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from "@/lib/firebase";
@@ -110,7 +111,8 @@ export async function sendMessage(chatId: string, senderId: string, text: string
     });
 }
 
-// Function to get messages for a chat with a real-time listener
+// This function is for CLIENT-SIDE use only, as it sets up a real-time listener.
+// It is not a Server Action.
 export function getMessagesForChat(chatId: string, callback: (messages: Message[]) => void) {
     const messagesCollection = collection(db, 'chats', chatId, 'messages');
     const q = query(messagesCollection, orderBy('createdAt', 'asc'));
