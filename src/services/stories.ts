@@ -16,7 +16,6 @@ export type User = {
     following?: number;
 };
 
-
 // NOTE: This is a placeholder for the real user data
 // In a real app, you would get this from your authentication system
 export const getCurrentUser = async (): Promise<User> => {
@@ -60,6 +59,28 @@ export async function createStory(data: any) {
         return { success: false, error: "Failed to create story." };
     }
 }
+
+export async function createTeam(data: { name: string, description: string }) {
+    const user = await getCurrentUser();
+    if (!user) {
+        throw new Error("You must be logged in to create a team.");
+    }
+    
+    try {
+        const docRef = await addDoc(collection(db, "teams"), {
+            name: data.name,
+            description: data.description,
+            ownerId: user.id,
+            members: [user.id],
+            createdAt: serverTimestamp(),
+        });
+        return { success: true, id: docRef.id };
+    } catch (e) {
+        console.error("Error creating team: ", e);
+        return { success: false, error: "Failed to create team." };
+    }
+}
+
 
 export async function getStories() {
     const storiesCol = collection(db, 'stories');

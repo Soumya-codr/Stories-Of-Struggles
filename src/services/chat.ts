@@ -12,6 +12,7 @@ import {
     orderBy,
     updateDoc,
     Timestamp,
+    onSnapshot
 } from "firebase/firestore";
 import { User, getAllUsers } from "./stories";
 
@@ -38,10 +39,10 @@ export async function createChat(user1Id: string, user2Id: string): Promise<stri
     // Check if a chat between these two users already exists
     const q = query(chatCollection, where('participantIds', 'array-contains', user1Id));
     const querySnapshot = await getDocs(q);
-    const existingChat = querySnapshot.docs.find(d => d.data().participantIds.includes(user2Id));
+    const existingChatDoc = querySnapshot.docs.find(d => d.data().participantIds.includes(user2Id));
 
-    if (existingChat) {
-        return existingChat.id;
+    if (existingChatDoc) {
+        return existingChatDoc.id;
     }
 
     // If no chat exists, create a new one
@@ -89,6 +90,9 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
 
 // Function to send a message to a chat
 export async function sendMessage(chatId: string, senderId: string, text: string) {
+    if (!chatId || !senderId || !text) {
+        throw new Error("Missing required parameters for sending a message.");
+    }
     const messagesCollection = collection(db, 'chats', chatId, 'messages');
     await addDoc(messagesCollection, {
         senderId,
@@ -102,4 +106,35 @@ export async function sendMessage(chatId: string, senderId: string, text: string
         lastMessage: text,
         lastMessageTimestamp: serverTimestamp(),
     });
+}
+
+
+// This function is for CLIENT-SIDE use only, as it sets up a real-time listener.
+// It is not a Server Action.
+export function getChatsForUserStream(userId: string, callback: (chats: Chat[]) => void) {
+    const chatCollection = collection(db, 'chats');
+    const q = query(chatCollection, where('participantIds', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        const allUsers = await getAllUsers();
+        const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+        const chats = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const participants: User[] = data.participantIds
+                .map((pId: string) => userMap.get(pId))
+                .filter((user: User | undefined): user is User => user !== undefined);
+            
+            return {
+                id: doc.id,
+                participantIds: data.participantIds,
+                participants: participants,
+                lastMessage: data.lastMessage,
+                lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
+            };
+        });
+        callback(chats);
+    });
+
+    return unsubscribe;
 }

@@ -9,9 +9,9 @@ import { Search, Send, MessageSquare, PlusCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { useEffect, useState, useRef } from "react";
 import { getCurrentUser } from "@/services/stories";
-import { getChatsForUser, sendMessage, Chat, Message } from "@/services/chat";
+import { sendMessage, getChatsForUserStream, type Chat, type Message } from "@/services/chat";
 import Link from "next/link";
-import { User } from "@/services/stories";
+import { type User } from "@/services/stories";
 import { collection, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -44,16 +44,23 @@ export default function MessagesPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchUser() {
       const user = await getCurrentUser();
       setCurrentUser(user);
-      if (user) {
-        const userChats = await getChatsForUser(user.id);
-        setChats(userChats);
-      }
     }
-    fetchData();
+    fetchUser();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Set up real-time listener for chats
+    const unsubscribe = getChatsForUserStream(currentUser.id, setChats);
+
+    // Clean up the listener when the component unmounts or user changes
+    return () => unsubscribe();
+  }, [currentUser]);
+
 
   useEffect(() => {
     if (activeChat) {
@@ -63,6 +70,7 @@ export default function MessagesPage() {
   }, [activeChat]);
 
   useEffect(() => {
+    // Scroll to the bottom of the messages when new messages arrive
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
@@ -72,8 +80,13 @@ export default function MessagesPage() {
     e.preventDefault();
     if (newMessage.trim() === "" || !currentUser || !activeChat) return;
 
-    await sendMessage(activeChat.id, currentUser.id, newMessage);
-    setNewMessage("");
+    try {
+        await sendMessage(activeChat.id, currentUser.id, newMessage);
+        setNewMessage("");
+    } catch (error) {
+        console.error("Failed to send message:", error);
+        // Optionally, show a toast notification for the error
+    }
   };
   
   const getOtherParticipant = (chat: Chat) => {
@@ -154,9 +167,9 @@ export default function MessagesPage() {
                               {!isOwn && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{sender?.name.charAt(0)}</AvatarFallback></Avatar>}
                                 <div className={cn("max-w-xs rounded-lg p-3 text-sm", isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
                                   <p>{msg.text}</p>
-                                  <p className="text-xs text-right mt-1 opacity-70">{new Date(msg.createdAt).toLocaleTimeString()}</p>
+                                  <p className="text-xs text-right mt-1 opacity-70">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                 </div>
-                              {isOwn && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>U</AvatarFallback></Avatar>}
+                              {isOwn && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback></Avatar>}
                             </div>
                           )
                       })}

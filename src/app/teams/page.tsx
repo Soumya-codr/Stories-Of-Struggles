@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Users } from "lucide-react";
+import Link from "next/link";
 
 export default function TeamsPage() {
   const teams: any[] = []; // No dummy data
@@ -9,8 +10,10 @@ export default function TeamsPage() {
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Your Teams</h1>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Create Team
+        <Button asChild>
+          <Link href="/teams/new">
+            <PlusCircle className="mr-2 h-4 w-4" /> Create Team
+          </Link>
         </Button>
       </div>
 
@@ -27,8 +30,10 @@ export default function TeamsPage() {
               Create a team to collaborate on your projects or join an existing one.
             </p>
             <div className="mt-6 flex justify-center gap-4">
-               <Button>
-                <PlusCircle className="mr-2 h-4 w-4" /> Create Team
+               <Button asChild>
+                  <Link href="/teams/new">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Create Team
+                  </Link>
               </Button>
               <Button variant="outline">Browse Teams</Button>
             </div>
