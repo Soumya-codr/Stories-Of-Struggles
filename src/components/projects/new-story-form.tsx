@@ -30,6 +30,9 @@ const newStoryFormSchema = z.object({
     message: "Your story must be at least 100 characters long.",
   }),
   tags: z.string().optional(),
+  projectUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  sourceCodeUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 })
 
 type NewStoryFormValues = z.infer<typeof newStoryFormSchema>
@@ -43,6 +46,9 @@ export function NewStoryForm() {
         description: "",
         story: "",
         tags: "",
+        projectUrl: "",
+        sourceCodeUrl: "",
+        imageUrl: "",
     },
     mode: "onChange",
   })
@@ -111,6 +117,56 @@ export function NewStoryForm() {
               </FormControl>
               <FormDescription>
                 You can use Markdown for formatting.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid md:grid-cols-2 gap-8">
+            <FormField
+              control={form.control}
+              name="projectUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://my-project.com" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Link to the live project (optional).
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sourceCodeUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Source Code URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://github.com/user/repo" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Link to the source code repository (optional).
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        </div>
+         <FormField
+          control={form.control}
+          name="imageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cover Image URL</FormLabel>
+              <FormControl>
+                <Input placeholder="https://placehold.co/600x400.png" {...field} />
+              </FormControl>
+              <FormDescription>
+                A URL for the story's cover image (optional).
               </FormDescription>
               <FormMessage />
             </FormItem>
