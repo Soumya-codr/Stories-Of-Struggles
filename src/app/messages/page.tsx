@@ -44,6 +44,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
   // 1. Fetch current user and all other users once
   useEffect(() => {
@@ -53,16 +54,19 @@ export default function MessagesPage() {
       
       const usersList = await getAllUsers();
       setAllUsers(new Map(usersList.map(u => [u.id, u])));
+      setInitialDataLoaded(true);
     }
     loadInitialData();
   }, []);
 
-  // 2. Set up real-time listener for chats when user and user list are available
+  // 2. Set up real-time listener for chats when initial data is loaded
   useEffect(() => {
-    if (!currentUser || allUsers.size === 0) return;
+    if (!initialDataLoaded || !currentUser) return;
 
     const chatCollection = collection(db, 'chats');
-    const q = query(chatCollection, where('participantids', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
+    // NOTE: This query requires a composite index in Firestore.
+    // The error message in the console will provide a direct link to create it.
+    const q = query(chatCollection, where('participantIds', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const chatsData = querySnapshot.docs.map(doc => {
@@ -82,9 +86,9 @@ export default function MessagesPage() {
         setChats(chatsData);
     });
 
-    // Clean up the listener when the component unmounts or user changes
+    // Clean up the listener when the component unmounts or dependencies change
     return () => unsubscribe();
-  }, [currentUser, allUsers]);
+  }, [initialDataLoaded, currentUser, allUsers]);
 
 
   // 3. Set up listener for messages in the active chat
