@@ -20,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "../ui/separator"
 import { Upload } from "lucide-react"
+import { createStory } from "@/services/stories"
+import { useState } from "react"
 
 const newStoryFormSchema = z.object({
   title: z.string().min(5, {
@@ -43,6 +45,7 @@ type NewStoryFormValues = z.infer<typeof newStoryFormSchema>
 
 export function NewStoryForm() {
   const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<NewStoryFormValues>({
     resolver: zodResolver(newStoryFormSchema),
     defaultValues: {
@@ -58,13 +61,30 @@ export function NewStoryForm() {
     mode: "onChange",
   })
 
-  function onSubmit(data: NewStoryFormValues) {
-    toast({
-      title: "Story Submitted!",
-      description: "Your project story has been submitted for review.",
-    })
-    console.log(data);
-    form.reset();
+  async function onSubmit(data: NewStoryFormValues) {
+    setIsSubmitting(true);
+    try {
+        // TODO: Handle image uploads properly. For now, we are ignoring them.
+        const result = await createStory(data);
+
+        if (result.success) {
+            toast({
+                title: "Story Published!",
+                description: "Your project story is now live for the community to see.",
+            });
+            form.reset();
+        } else {
+            throw new Error(result.error || "An unknown error occurred.");
+        }
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to publish your story. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -78,7 +98,7 @@ export function NewStoryForm() {
             <FormItem>
               <FormLabel>Project Title</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Rebuilding a Legacy System" {...field} />
+                <Input placeholder="e.g., Rebuilding a Legacy System" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
                 A catchy title for your project story.
@@ -98,6 +118,7 @@ export function NewStoryForm() {
                   placeholder="A brief one or two-sentence summary of your story."
                   className="resize-none"
                   {...field}
+                  disabled={isSubmitting}
                 />
               </FormControl>
                <FormDescription>
@@ -118,6 +139,7 @@ export function NewStoryForm() {
                   placeholder="Tell us everything... the highs, the lows, the 'aha!' moments."
                   className="min-h-64"
                   {...field}
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormDescription>
@@ -135,7 +157,7 @@ export function NewStoryForm() {
                 <FormItem>
                   <FormLabel>Project URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://my-project.com" {...field} />
+                    <Input placeholder="https://my-project.com" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormDescription>
                     Link to the live project (optional).
@@ -151,7 +173,7 @@ export function NewStoryForm() {
                 <FormItem>
                   <FormLabel>Source Code URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://github.com/user/repo" {...field} />
+                    <Input placeholder="https://github.com/user/repo" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormDescription>
                     Link to the source code repository (optional).
@@ -168,7 +190,7 @@ export function NewStoryForm() {
             <FormItem>
               <FormLabel>Cover Image URL</FormLabel>
               <FormControl>
-                <Input placeholder="https://placehold.co/600x400.png" {...field} />
+                <Input placeholder="https://placehold.co/600x400.png" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
                 A URL for the story's cover image (optional).
@@ -184,7 +206,7 @@ export function NewStoryForm() {
                 <FormItem>
                     <FormLabel>Video URL</FormLabel>
                     <FormControl>
-                        <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                        <Input placeholder="https://youtube.com/watch?v=..." {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormDescription>
                         A link to a video about your project (YouTube, Vimeo, etc.).
@@ -206,6 +228,7 @@ export function NewStoryForm() {
                                 multiple
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 onChange={(e) => field.onChange(e.target.files)}
+                                disabled={isSubmitting}
                             />
                             <div className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg border-muted hover:bg-muted/50 transition-colors">
                                 <div className="text-center">
@@ -230,7 +253,7 @@ export function NewStoryForm() {
             <FormItem>
               <FormLabel>Tags</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., React, Node.js, Burnout" {...field} />
+                <Input placeholder="e.g., React, Node.js, Burnout" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
                 Comma-separated tags to help people find your story.
@@ -239,7 +262,9 @@ export function NewStoryForm() {
             </FormItem>
           )}
         />
-        <Button type="submit">Publish Story</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Publishing...' : 'Publish Story'}
+        </Button>
       </form>
     </Form>
   )
