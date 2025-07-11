@@ -24,6 +24,7 @@ import { Upload } from "lucide-react"
 import { createStory } from "@/services/stories"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/auth-context"
 
 const newStoryFormSchema = z.object({
   title: z.string().min(5, {
@@ -48,6 +49,7 @@ type NewStoryFormValues = z.infer<typeof newStoryFormSchema>
 export function NewStoryForm() {
   const { toast } = useToast()
   const router = useRouter();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<NewStoryFormValues>({
     resolver: zodResolver(newStoryFormSchema),
@@ -65,10 +67,18 @@ export function NewStoryForm() {
   })
 
   async function onSubmit(data: NewStoryFormValues) {
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create a story.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
         // TODO: Handle image uploads properly. For now, we are ignoring them.
-        const result = await createStory(data);
+        const result = await createStory(data, user.id);
 
         if (result.success) {
             toast({
@@ -267,7 +277,7 @@ export function NewStoryForm() {
                 </FormItem>
             )}
         />
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || !user}>
           {isSubmitting ? 'Publishing...' : 'Publish Story'}
         </Button>
       </form>

@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast"
 import { createTeam } from "@/services/stories"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/auth-context"
 
 const newTeamFormSchema = z.object({
   name: z.string().min(3, {
@@ -36,6 +37,7 @@ type NewTeamFormValues = z.infer<typeof newTeamFormSchema>
 export function NewTeamForm() {
   const { toast } = useToast()
   const router = useRouter();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<NewTeamFormValues>({
     resolver: zodResolver(newTeamFormSchema),
@@ -47,9 +49,17 @@ export function NewTeamForm() {
   })
 
   async function onSubmit(data: NewTeamFormValues) {
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create a team.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
-        const result = await createTeam(data);
+        const result = await createTeam(data, user.id);
 
         if (result.success) {
             toast({
@@ -110,7 +120,7 @@ export function NewTeamForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || !user}>
           {isSubmitting ? 'Creating Team...' : 'Create Team'}
         </Button>
       </form>

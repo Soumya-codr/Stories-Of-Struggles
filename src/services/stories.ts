@@ -3,10 +3,7 @@
 
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where, writeBatch, updateDoc, Timestamp } from "firebase/firestore";
-import { getAuth } from 'firebase/auth';
-import { app } from '@/lib/firebase';
 import { getAuthenticatedUser } from "@/lib/firebase-helpers";
-
 
 // This defines the shape of a user object.
 // We export it so it can be used in other parts of the app.
@@ -28,6 +25,7 @@ export type Story = {
   title: string;
   description: string;
   author: {
+    id: string;
     name: string;
     avatarUrl: string;
     username: string;
@@ -44,16 +42,8 @@ export type Story = {
   videoUrl?: string;
 };
 
-
-// NOTE: This is a placeholder for the real user data
-// In a real app, you would get this from your authentication system
-export const getCurrentUser = async (): Promise<User | null> => {
-    // This now gets the real authenticated user
-    return getAuthenticatedUser();
-};
-
-export async function createStory(data: any) {
-    const user = await getCurrentUser();
+export async function createStory(data: any, userId: string) {
+    const user = await getUserById(userId);
 
     if (!user) {
         throw new Error("You must be logged in to create a story.");
@@ -73,7 +63,7 @@ export async function createStory(data: any) {
             tags: data.tags.split(',').map((tag: string) => tag.trim().toLowerCase()).filter(Boolean),
             projectUrl: data.projectUrl || '',
             sourceCodeUrl: data.sourceCodeUrl || '',
-            imageUrl: data.imageUrl || '',
+imageUrl: data.imageUrl || '',
             videoUrl: data.videoUrl || '',
             upvotes: 0,
             comments: 0,
@@ -88,8 +78,8 @@ export async function createStory(data: any) {
     }
 }
 
-export async function createTeam(data: { name: string, description: string }) {
-    const user = await getCurrentUser();
+export async function createTeam(data: { name: string, description: string }, userId: string) {
+    const user = await getUserById(userId);
     if (!user) {
         throw new Error("You must be logged in to create a team.");
     }
@@ -189,8 +179,8 @@ export async function getStoriesByUsername(username: string): Promise<Story[]> {
 
 
 export async function updateUserProfile(userId: string, data: Partial<Pick<User, 'name' | 'bio' | 'website'>>) {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.id !== userId) {
+    const user = await getAuthenticatedUser();
+    if (!user || user.id !== userId) {
         throw new Error("Not authorized");
     }
 
