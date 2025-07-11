@@ -130,6 +130,7 @@ export async function getStoryById(id: string): Promise<Story | null> {
             id: storySnapshot.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+            updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
         } as Story;
     } else {
         return null;
@@ -178,6 +179,7 @@ export async function getStoriesByUsername(username: string): Promise<Story[]> {
             id: doc.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+            updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
         } as Story;
     });
     return storyList;
@@ -185,7 +187,6 @@ export async function getStoriesByUsername(username: string): Promise<Story[]> {
 
 
 export async function updateUserProfile(userId: string, data: Partial<Pick<User, 'name' | 'bio' | 'website'>>) {
-    // The authorization check was faulty and has been removed.
     // Security should be handled by Firestore security rules, which ensure
     // a user can only write to their own document.
     if (!userId) {
