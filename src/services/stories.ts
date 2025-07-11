@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where, writeBatch } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where, writeBatch, updateDoc } from "firebase/firestore";
 import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { getAuthenticatedUser } from "@/lib/firebase-helpers";
@@ -168,4 +168,35 @@ export async function getStoriesByUsername(username: string) {
         }
     });
     return storyList as any[];
+}
+
+
+export async function updateUserProfile(userId: string, data: Partial<Pick<User, 'name' | 'bio' | 'website'>>) {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.id !== userId) {
+        throw new Error("Not authorized");
+    }
+
+    const userDocRef = doc(db, 'users', userId);
+    
+    // We should also update the author details in all of their stories
+    const storiesRef = collection(db, "stories");
+    const q = query(storiesRef, where("author.id", "==", userId));
+    const storiesSnapshot = await getDocs(q);
+
+    const batch = writeBatch(db);
+
+    // Update user document
+    batch.update(userDocRef, data);
+
+    // Update author info in all stories
+    storiesSnapshot.forEach(storyDoc => {
+        const storyRef = doc(db, 'stories', storyDoc.id);
+        const updatedAuthor = {
+            'author.name': data.name,
+        }
+        batch.update(storyRef, updatedAuthor);
+    });
+
+    await batch.commit();
 }

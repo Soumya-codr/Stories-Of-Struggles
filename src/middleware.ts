@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('firebaseIdToken');
   const { pathname } = request.nextUrl;
 
-  const protectedRoutes = ['/new-story', '/messages', '/teams'];
+  const protectedRoutes = ['/new-story', '/messages', '/teams', '/settings'];
 
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
@@ -24,5 +24,6 @@ export const config = {
     '/new-story/:path*',
     '/messages/:path*',
     '/teams/:path*',
+    '/settings/:path*',
   ],
 }
