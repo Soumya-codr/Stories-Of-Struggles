@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from "@/lib/firebase";
@@ -13,7 +14,7 @@ import {
     updateDoc,
     Timestamp
 } from "firebase/firestore";
-import { User, getAllUsers, getCurrentUser } from "./stories";
+import { User, getAllUsers } from "./stories";
 
 // Define TypeScript interfaces for our chat data
 export interface Chat {
@@ -35,27 +36,32 @@ export interface Message {
 export async function createChat(user1Id: string, user2Id: string): Promise<string> {
     const chatCollection = collection(db, 'chats');
     
-    // Check if a chat between these two users already exists
-    const q = query(chatCollection, where('participantIds', 'array-contains', user1Id));
-    const querySnapshot = await getDocs(q);
-    const existingChatDoc = querySnapshot.docs.find(d => d.data().participantIds.includes(user2Id));
+    // To prevent duplicate chats, create a consistent ID from the two user IDs
+    const sortedIds = [user1Id, user2Id].sort();
+    const existingChatQuery = query(
+      chatCollection, 
+      where('participantIds', '==', sortedIds)
+    );
 
-    if (existingChatDoc) {
-        return existingChatDoc.id;
+    const querySnapshot = await getDocs(existingChatQuery);
+
+    if (!querySnapshot.empty) {
+        // Chat already exists
+        return querySnapshot.docs[0].id;
     }
 
     // If no chat exists, create a new one
     const newChatRef = await addDoc(chatCollection, {
-        participantIds: [user1Id, user2Id],
+        participantIds: sortedIds,
         lastMessage: "Chat created",
-        lastMessageTimestamp: serverTimestamp(),
+        lastMessageTimestamp: Timestamp.now(), // Use Timestamp.now() for consistency
     });
 
     return newChatRef.id;
 }
 
 
-// Function to get all chats for a specific user
+// Function to get all chats for a specific user (Not used on the main messages page, but good for reference)
 export async function getChatsForUser(userId: string): Promise<Chat[]> {
     const chatCollection = collection(db, 'chats');
     const q = query(chatCollection, where('participantIds', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
@@ -71,13 +77,13 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
         const data = doc.data();
         
         // Populate participant details from the user map
-        const participants: User[] = data.participantIds
+        const participants: User[] = (data.participantIds || [])
             .map((pId: string) => userMap.get(pId))
             .filter((user: User | undefined): user is User => user !== undefined);
 
         chats.push({
             id: doc.id,
-            participantIds: data.participantIds,
+            participantIds: data.participantIds || [],
             participants: participants,
             lastMessage: data.lastMessage,
             lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
@@ -103,6 +109,6 @@ export async function sendMessage(chatId: string, senderId: string, text: string
     const chatDocRef = doc(db, 'chats', chatId);
     await updateDoc(chatDocRef, {
         lastMessage: text,
-        lastMessageTimestamp: serverTimestamp(),
+        lastMessageTimestamp: Timestamp.now(), // Use Timestamp.now() for consistency
     });
 }
