@@ -14,13 +14,15 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage({ params }: { params: { username: string } }) {
-  const { username } = params;
   const [user, setUser] = useState<User | null>(null);
   const [userProjects, setUserProjects] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
   
   useEffect(() => {
+    // Correctly access params inside the useEffect hook
+    const username = params.username;
+    
     async function fetchData() {
       if (!username) return;
       try {
@@ -44,7 +46,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
       }
     }
     fetchData();
-  }, [username]);
+  }, [params.username]); // Use params.username as the dependency
 
 
   if (loading) {
