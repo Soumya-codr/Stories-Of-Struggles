@@ -21,25 +21,40 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloading, setReloading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setReloading(true);
       if (firebaseUser) {
-        const token = await firebaseUser.getIdToken();
-        Cookies.set('firebaseIdToken', token);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUser({ id: userDoc.id, ...userDoc.data() } as User);
-        } else {
-          // This case might happen if user doc creation fails during signup
-           setUser(null);
+        try {
+          const token = await firebaseUser.getIdToken();
+          Cookies.set('firebaseIdToken', token);
+          
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            setUser({ id: userDoc.id, ...userDoc.data() } as User);
+          } else {
+            // User exists in Auth but not in Firestore, maybe during signup race condition
+            // Or if doc creation failed. We should log them out to be safe.
+            await signOut(auth); // This will trigger onAuthStateChanged again with null
+            setUser(null);
+            Cookies.remove('firebaseIdToken');
+          }
+        } catch (error) {
+            console.error("Auth context error:", error);
+            setUser(null);
+            Cookies.remove('firebaseIdToken');
         }
       } else {
-        Cookies.remove('firebaseIdToken');
+        // No firebase user, so we are logged out.
         setUser(null);
+        Cookies.remove('firebaseIdToken');
       }
       setLoading(false);
+      setReloading(false);
     });
 
     return () => unsubscribe();
@@ -53,7 +68,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const firebaseUser = userCredential.user;
     
-    // Create a user document in Firestore
     const userDocRef = doc(db, 'users', firebaseUser.uid);
     await setDoc(userDocRef, {
       name,
@@ -71,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signOut(auth);
   };
 
-  const value = { user, loading, login, signup, logout };
+  const value = { user, loading: loading || reloading, login, signup, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
