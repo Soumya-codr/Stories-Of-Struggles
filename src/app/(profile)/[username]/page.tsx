@@ -18,9 +18,9 @@ export default function ProfilePage({ params }: { params: { username: string } }
   const [userProjects, setUserProjects] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
-  const { username } = params;
-
+  
   useEffect(() => {
+    const username = params.username;
     async function fetchData() {
       if (!username) return;
       try {
@@ -44,7 +44,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
       }
     }
     fetchData();
-  }, [username]);
+  }, [params.username]);
 
 
   if (loading) {
