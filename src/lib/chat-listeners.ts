@@ -20,10 +20,11 @@ import type { ChatWithParticipants, Message } from "@/services/chat";
  */
 export function streamChatsForUser(userId: string, callback: (chats: ChatWithParticipants[]) => void): () => void {
     const chatCollection = collection(db, 'chats');
+    // Simplify the query to remove the orderBy clause that requires a composite index.
+    // We will sort manually after fetching.
     const q = query(
         chatCollection, 
-        where('participantIds', 'array-contains', userId),
-        orderBy('lastMessageTimestamp', 'asc')
+        where('participantIds', 'array-contains', userId)
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
@@ -43,7 +44,14 @@ export function streamChatsForUser(userId: string, callback: (chats: ChatWithPar
             } as ChatWithParticipants;
         });
 
-        callback(chatsWithParticipants.reverse()); // Reverse the array to show newest first
+        // Manually sort the chats by timestamp, newest first.
+        chatsWithParticipants.sort((a, b) => {
+            const timeA = a.lastMessageTimestamp?.toMillis() || 0;
+            const timeB = b.lastMessageTimestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+
+        callback(chatsWithParticipants);
 
     }, (error) => {
         console.error("Error listening to chats:", error);
