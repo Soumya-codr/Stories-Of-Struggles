@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,12 +11,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { getAllUsers, User, getCurrentUser } from '@/services/stories';
 import { createChat } from '@/services/chat';
 import { Search } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function NewMessagePage() {
     const [users, setUsers] = useState<User[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
     const router = useRouter();
+    const { toast } = useToast();
 
     useEffect(() => {
         async function loadData() {
@@ -25,19 +29,31 @@ export default function NewMessagePage() {
             ]);
             setCurrentUser(cUser);
             // Filter out the current user from the list
-            setUsers(allUsers.filter(user => user.id !== cUser.id));
+            if (cUser) {
+              setUsers(allUsers.filter(user => user.id !== cUser.id));
+            }
         }
         loadData();
     }, []);
 
     const handleCreateChat = async (userId: string) => {
-        if (!currentUser) return;
+        if (!currentUser || isCreating) return;
+        setIsCreating(true);
         try {
-            const chatId = await createChat(currentUser.id, userId);
+            await createChat(currentUser.id, userId);
+            toast({
+                title: "Chat created!",
+                description: "You can now start your conversation.",
+            });
             router.push('/messages');
         } catch (error) {
             console.error("Error creating chat:", error);
-            // You could show a toast notification here
+            toast({
+                title: 'Error',
+                description: 'Could not create chat. Please try again.',
+                variant: 'destructive',
+            });
+            setIsCreating(false);
         }
     };
 
@@ -76,7 +92,9 @@ export default function NewMessagePage() {
                                             <p className="text-sm text-muted-foreground">@{user.username}</p>
                                         </div>
                                     </div>
-                                    <Button onClick={() => handleCreateChat(user.id)}>Message</Button>
+                                    <Button onClick={() => handleCreateChat(user.id)} disabled={isCreating}>
+                                      {isCreating ? 'Starting...' : 'Message'}
+                                    </Button>
                                 </div>
                             ))}
                         </div>

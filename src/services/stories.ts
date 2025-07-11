@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from "@/lib/firebase";
@@ -159,6 +160,10 @@ export async function getAllUsers(): Promise<User[]> {
 export async function getUserByUsername(username: string): Promise<User | null> {
     // In a real app, this would query a 'users' collection in Firestore
     return users.find(u => u.username === username) || null;
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+    return users.find(u => u.id === id) || null;
 }
 
 export async function getStoriesByUsername(username: string) {

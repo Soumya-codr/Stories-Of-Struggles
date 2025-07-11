@@ -13,100 +13,92 @@ import {
     orderBy,
     updateDoc,
     Timestamp,
-    getDoc
+    getDoc,
+    setDoc,
+    onSnapshot,
+    limit
 } from "firebase/firestore";
-import { User, getAllUsers } from "./stories";
+import type { User } from "./stories";
 
-// Define TypeScript interfaces for our chat data
+// Base Chat document structure in Firestore
 export interface Chat {
     id: string;
     participantIds: string[];
-    participants: User[]; // We'll populate this with user data
     lastMessage?: string;
-    lastMessageTimestamp?: any;
+    lastMessageTimestamp: Timestamp;
 }
 
+// Chat object enriched with participant user data
+export interface ChatWithParticipants extends Chat {
+    participants: User[];
+}
+
+// Message document structure in Firestore
 export interface Message {
     id: string;
     text: string;
     senderId: string;
-    createdAt: string;
+    createdAt: string; // ISO string format for client-side use
 }
 
-// Function to create a new chat between two users
+/**
+ * Creates a new chat between two users if one doesn't already exist.
+ * Uses a deterministic ID to prevent duplicate chats.
+ */
 export async function createChat(user1Id: string, user2Id: string): Promise<string> {
-    const chatCollection = collection(db, 'chats');
-    
-    // To prevent duplicate chats, create a consistent ID from the two user IDs
     const sortedIds = [user1Id, user2Id].sort();
-    const q = query(chatCollection, where('participantIds', '==', sortedIds));
+    const chatId = sortedIds.join('_'); // Deterministic ID
+    const chatDocRef = doc(db, 'chats', chatId);
 
-    const querySnapshot = await getDocs(q);
+    try {
+        const chatDoc = await getDoc(chatDocRef);
 
-    if (!querySnapshot.empty) {
-        // Chat already exists
-        return querySnapshot.docs[0].id;
-    }
+        if (chatDoc.exists()) {
+            // Chat already exists, return its ID
+            return chatId;
+        }
 
-    // If no chat exists, create a new one
-    const newChatRef = await addDoc(chatCollection, {
-        participantIds: sortedIds,
-        lastMessage: "Chat created.",
-        // Ensure the timestamp field always exists, even on creation.
-        lastMessageTimestamp: Timestamp.now(), 
-    });
-
-    return newChatRef.id;
-}
-
-// Function to get all chats for a specific user (Not used on the main messages page, but good for reference)
-export async function getChatsForUser(userId: string): Promise<Chat[]> {
-    const chatCollection = collection(db, 'chats');
-    const q = query(chatCollection, where('participantIds', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
-
-    const querySnapshot = await getDocs(q);
-    const chats: Chat[] = [];
-
-    // Fetch all users once to avoid multiple lookups in the loop
-    const allUsers = await getAllUsers();
-    const userMap = new Map(allUsers.map(u => [u.id, u]));
-
-    for (const doc of querySnapshot.docs) {
-        const data = doc.data();
-        
-        // Populate participant details from the user map
-        const participants: User[] = (data.participantIds || [])
-            .map((pId: string) => userMap.get(pId))
-            .filter((user: User | undefined): user is User => user !== undefined);
-
-        chats.push({
-            id: doc.id,
-            participantIds: data.participantIds || [],
-            participants: participants,
-            lastMessage: data.lastMessage,
-            lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
+        // Chat doesn't exist, create it
+        await setDoc(chatDocRef, {
+            participantIds: sortedIds,
+            lastMessage: "Chat created.",
+            lastMessageTimestamp: Timestamp.now(), // Ensure field exists on creation
         });
-    }
 
-    return chats;
+        return chatId;
+    } catch (error) {
+        console.error("Error creating chat:", error);
+        throw new Error("Could not create or find chat.");
+    }
 }
 
-// Function to send a message to a chat
-export async function sendMessage(chatId: string, senderId: string, text: string) {
-    if (!chatId || !senderId || !text) {
+
+/**
+ * Sends a message to a chat and updates the chat's last message details.
+ */
+export async function sendMessage(chatId: string, senderId: string, text: string): Promise<void> {
+    if (!chatId || !senderId || !text.trim()) {
         throw new Error("Missing required parameters for sending a message.");
     }
-    const messagesCollection = collection(db, 'chats', chatId, 'messages');
-    await addDoc(messagesCollection, {
-        senderId,
-        text,
-        createdAt: serverTimestamp(),
-    });
 
-    // Update the last message on the chat document
+    const messagesCollection = collection(db, 'chats', chatId, 'messages');
     const chatDocRef = doc(db, 'chats', chatId);
-    await updateDoc(chatDocRef, {
-        lastMessage: text,
-        lastMessageTimestamp: serverTimestamp(),
-    });
+
+    try {
+        // Add the new message to the messages subcollection
+        await addDoc(messagesCollection, {
+            senderId,
+            text,
+            createdAt: serverTimestamp(),
+        });
+
+        // Update the last message on the parent chat document
+        await updateDoc(chatDocRef, {
+            lastMessage: text,
+            lastMessageTimestamp: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error sending message:", error);
+        throw new Error("Failed to send message.");
+    }
 }
