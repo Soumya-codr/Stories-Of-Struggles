@@ -1,3 +1,6 @@
+
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,19 +8,72 @@ import ProjectCard from "@/components/projects/project-card";
 import { Mail, Link as LinkIcon, Edit } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getStoriesByUsername, getUserByUsername, getCurrentUser } from "@/services/stories";
+import { getStoriesByUsername, getUserByUsername, User, Story } from "@/services/stories";
+import { useAuth } from "@/context/auth-context";
+import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function ProfilePage({ params }: { params: { username: string } }) {
-  // We can't know the current user on the server in this setup, so we fetch it on the client
-  // But for checking if the profile being viewed IS the current user, we can pass it down
-  const [user, userProjects, currentUser] = await Promise.all([
-    getUserByUsername(params.username),
-    getStoriesByUsername(params.username),
-    getCurrentUser() // This will be null if not logged in
-  ]);
+export default function ProfilePage({ params }: { params: { username: string } }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [userProjects, setUserProjects] = useState<Story[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user: currentUser } = useAuth();
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [fetchedUser, fetchedProjects] = await Promise.all([
+          getUserByUsername(params.username),
+          getStoriesByUsername(params.username),
+        ]);
+
+        if (!fetchedUser) {
+          notFound();
+          return;
+        }
+        setUser(fetchedUser);
+        setUserProjects(fetchedProjects);
+      } catch (error) {
+        console.error("Failed to fetch profile data:", error);
+        // Optionally handle error state here
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [params.username]);
+
+
+  if (loading) {
+     return (
+        <div className="container mx-auto py-8">
+          <Card className="mb-8 overflow-hidden">
+            <Skeleton className="h-48 w-full" />
+            <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6 -mt-24">
+              <Skeleton className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-background" />
+              <div className="text-center md:text-left flex-1 mt-16 md:mt-20">
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-32 mb-4" />
+                <Skeleton className="h-4 w-full max-w-lg" />
+              </div>
+            </CardContent>
+          </Card>
+          <div>
+            <Skeleton className="h-8 w-64 mb-4" />
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-96 w-full" />
+              <Skeleton className="h-96 w-full" />
+              <Skeleton className="h-96 w-full" />
+            </div>
+          </div>
+        </div>
+      );
+  }
 
   if (!user) {
-    notFound();
+    // This will be caught by notFound() in useEffect, but as a fallback
+    return notFound();
   }
 
   const isCurrentUser = user.username === currentUser?.username;
