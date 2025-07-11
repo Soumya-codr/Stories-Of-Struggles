@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/card"
 import StoryPromptGenerator from "@/components/ai/story-prompt-generator";
 import { NewStoryForm } from "@/components/projects/new-story-form";
+import { Separator } from "@/components/ui/separator";
+import StoryWeaver from "@/components/ai/story-weaver";
 
 export default function NewStoryPage() {
   return (
@@ -19,12 +21,22 @@ export default function NewStoryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="mb-8 p-6 rounded-lg bg-muted/50">
-              <h3 className="text-lg font-semibold mb-2">Need inspiration?</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Use our AI prompt generator to get some ideas for your story.
-              </p>
-              <StoryPromptGenerator />
+            <div className="mb-8 p-6 rounded-lg bg-muted/50 space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Need inspiration?</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Use our AI prompt generator to get some ideas for your story.
+                </p>
+                <StoryPromptGenerator />
+              </div>
+              <Separator />
+               <div>
+                <h3 className="text-lg font-semibold mb-2">Want a head start?</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Let our AI Story Weaver draft a beautiful narrative for you based on a few key points.
+                </p>
+                <StoryWeaver />
+              </div>
             </div>
             <NewStoryForm />
         </CardContent>
