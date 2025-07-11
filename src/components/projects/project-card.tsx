@@ -12,24 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import type { Story } from '@/services/stories'
 
-type Project = {
-  id: string;
-  title: string;
-  description: string;
-  author: {
-    name: string;
-    avatarUrl: string;
-    username: string;
-  };
-  imageUrl: string;
-  tags: string[];
-  upvotes: number;
-  comments: number;
-  dataAiHint?: string;
-};
-
-export default function ProjectCard({ project }: { project: Project }) {
+export default function ProjectCard({ project }: { project: Story }) {
   return (
     <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg">
       <Link href={`/projects/${project.id}`} className="block">

@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -153,6 +154,22 @@ export function NewStoryForm() {
             </FormItem>
           )}
         />
+         <FormField
+          control={form.control}
+          name="tags"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tags</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Marketing, Technology, Regulations" {...field} disabled={isSubmitting} />
+              </FormControl>
+              <FormDescription>
+                Comma-separated tags to help people find your story.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <div className="grid md:grid-cols-2 gap-8">
             <FormField
               control={form.control}
@@ -249,22 +266,6 @@ export function NewStoryForm() {
                     <FormMessage />
                 </FormItem>
             )}
-        />
-         <FormField
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tags</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., React, Node.js, Burnout" {...field} disabled={isSubmitting} />
-              </FormControl>
-              <FormDescription>
-                Comma-separated tags to help people find your story.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
         />
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Publishing...' : 'Publish Story'}

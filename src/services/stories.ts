@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where, writeBatch, updateDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where, writeBatch, updateDoc, Timestamp } from "firebase/firestore";
 import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { getAuthenticatedUser } from "@/lib/firebase-helpers";
@@ -21,6 +21,29 @@ export type User = {
     followers?: number;
     following?: number;
 };
+
+// This defines the shape of a Story object.
+export type Story = {
+  id: string;
+  title: string;
+  description: string;
+  author: {
+    name: string;
+    avatarUrl: string;
+    username: string;
+  };
+  imageUrl: string;
+  tags: string[];
+  upvotes: number;
+  comments: number;
+  createdAt: string; // ISO string
+  dataAiHint?: string;
+  story: string;
+  projectUrl?: string;
+  sourceCodeUrl?: string;
+  videoUrl?: string;
+};
+
 
 // NOTE: This is a placeholder for the real user data
 // In a real app, you would get this from your authentication system
@@ -47,7 +70,7 @@ export async function createStory(data: any) {
             title: data.title,
             description: data.description,
             story: data.story,
-            tags: data.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean),
+            tags: data.tags.split(',').map((tag: string) => tag.trim().toLowerCase()).filter(Boolean),
             projectUrl: data.projectUrl || '',
             sourceCodeUrl: data.sourceCodeUrl || '',
             imageUrl: data.imageUrl || '',
@@ -87,7 +110,7 @@ export async function createTeam(data: { name: string, description: string }) {
 }
 
 
-export async function getStories() {
+export async function getStories(): Promise<Story[]> {
     const storiesCol = collection(db, 'stories');
     const storySnapshot = await getDocs(storiesCol);
     const storyList = storySnapshot.docs.map(doc => {
@@ -95,13 +118,13 @@ export async function getStories() {
         return {
             id: doc.id,
             ...data,
-            createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-        }
+            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+        } as Story;
     });
-    return storyList as any[];
+    return storyList;
 }
 
-export async function getStoryById(id: string) {
+export async function getStoryById(id: string): Promise<Story | null> {
     const storyDoc = doc(db, 'stories', id);
     const storySnapshot = await getDoc(storyDoc);
 
@@ -110,8 +133,8 @@ export async function getStoryById(id: string) {
         return {
             id: storySnapshot.id,
             ...data,
-            createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-        } as any;
+            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+        } as Story;
     } else {
         return null;
     }
@@ -156,7 +179,7 @@ export async function getUserById(id: string): Promise<User | null> {
     }
 }
 
-export async function getStoriesByUsername(username: string) {
+export async function getStoriesByUsername(username: string): Promise<Story[]> {
     const q = query(collection(db, "stories"), where("author.username", "==", username));
     const querySnapshot = await getDocs(q);
     const storyList = querySnapshot.docs.map(doc => {
@@ -164,10 +187,10 @@ export async function getStoriesByUsername(username: string) {
         return {
             id: doc.id,
             ...data,
-            createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-        }
+            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+        } as Story;
     });
-    return storyList as any[];
+    return storyList;
 }
 
 
