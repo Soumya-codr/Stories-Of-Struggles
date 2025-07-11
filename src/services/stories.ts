@@ -36,6 +36,7 @@ export type Story = {
   upvotes: number;
   comments: number;
   createdAt: string; // ISO string
+  updatedAt: string; // ISO string
   dataAiHint?: string;
   story: string;
   projectUrl?: string;
@@ -185,8 +186,9 @@ export async function getStoriesByUsername(username: string): Promise<Story[]> {
 
 
 export async function updateUserProfile(userId: string, data: Partial<Pick<User, 'name' | 'bio' | 'website'>>) {
-    const user = await getAuthenticatedUser();
-    if (!user || user.id !== userId) {
+    // This is a server action, so we can use getAuthenticatedUser for an extra layer of security.
+    const authenticatedUser = await getAuthenticatedUser();
+    if (!authenticatedUser || authenticatedUser.id !== userId) {
         throw new Error("Not authorized");
     }
 
@@ -199,16 +201,24 @@ export async function updateUserProfile(userId: string, data: Partial<Pick<User,
 
     const batch = writeBatch(db);
 
+    const updateData: any = { ...data };
+    if (data.name) {
+        updateData['author.name'] = data.name;
+    }
+
     // Update user document
     batch.update(userDocRef, data);
 
     // Update author info in all stories
     storiesSnapshot.forEach(storyDoc => {
         const storyRef = doc(db, 'stories', storyDoc.id);
-        const updatedAuthor = {
-            'author.name': data.name,
+        const authorUpdate: { [key: string]: any } = {};
+        if (data.name) {
+            authorUpdate['author.name'] = data.name;
         }
-        batch.update(storyRef, updatedAuthor);
+        // Add other author fields here if they can be updated
+        
+        batch.update(storyRef, authorUpdate);
     });
 
     await batch.commit();
