@@ -115,7 +115,7 @@ export async function getStoryById(id: string) {
 
 // NOTE: This is a placeholder user database.
 // In a real app, you would have a 'users' collection in Firestore.
-const users: User[] = [
+const placeholderUsers: User[] = [
     {
       id: 'user123',
       name: 'Developer',
@@ -150,19 +150,28 @@ const users: User[] = [
     }
 ];
 
+let usersCache: User[] | null = null;
+
 export async function getAllUsers(): Promise<User[]> {
     // This function returns all users from our placeholder data.
     // In a real application, you would fetch this from your 'users' collection.
-    return users;
+    // We cache the results to avoid repeated lookups.
+    if (usersCache) {
+        return usersCache;
+    }
+    // In a real app, this would be a Firestore query.
+    usersCache = placeholderUsers;
+    return usersCache;
 }
 
 
 export async function getUserByUsername(username: string): Promise<User | null> {
-    // In a real app, this would query a 'users' collection in Firestore
+    const users = await getAllUsers();
     return users.find(u => u.username === username) || null;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
+    const users = await getAllUsers();
     return users.find(u => u.id === id) || null;
 }
 
