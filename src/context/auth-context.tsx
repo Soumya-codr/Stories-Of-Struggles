@@ -6,7 +6,6 @@ import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndP
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { User } from '@/services/stories';
-import Cookies from 'js-cookie';
 
 interface AuthContextType {
   user: User | null;
@@ -29,7 +28,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseUser) {
         try {
           const token = await firebaseUser.getIdToken();
-          Cookies.set('firebaseIdToken', token);
+          if (typeof window !== 'undefined') {
+            const { default: Cookies } = await import('js-cookie');
+            Cookies.set('firebaseIdToken', token);
+          }
           
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
@@ -41,17 +43,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Or if doc creation failed. We should log them out to be safe.
             await signOut(auth); // This will trigger onAuthStateChanged again with null
             setUser(null);
-            Cookies.remove('firebaseIdToken');
+            if (typeof window !== 'undefined') {
+              const { default: Cookies } = await import('js-cookie');
+              Cookies.remove('firebaseIdToken');
+            }
           }
         } catch (error) {
             console.error("Auth context error:", error);
             setUser(null);
-            Cookies.remove('firebaseIdToken');
+            if (typeof window !== 'undefined') {
+              const { default: Cookies } = await import('js-cookie');
+              Cookies.remove('firebaseIdToken');
+            }
         }
       } else {
         // No firebase user, so we are logged out.
         setUser(null);
-        Cookies.remove('firebaseIdToken');
+        if (typeof window !== 'undefined') {
+          const { default: Cookies } = await import('js-cookie');
+          Cookies.remove('firebaseIdToken');
+        }
       }
       setLoading(false);
       setReloading(false);
