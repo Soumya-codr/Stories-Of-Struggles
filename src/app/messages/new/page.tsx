@@ -31,6 +31,8 @@ export default function NewMessagePage() {
             // Filter out the current user from the list
             if (cUser) {
               setUsers(allUsers.filter(user => user.id !== cUser.id));
+            } else {
+              setUsers(allUsers);
             }
         }
         loadData();
@@ -53,6 +55,7 @@ export default function NewMessagePage() {
                 description: 'Could not create chat. Please try again.',
                 variant: 'destructive',
             });
+        } finally {
             setIsCreating(false);
         }
     };
