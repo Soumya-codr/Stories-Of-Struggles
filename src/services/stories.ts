@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from "@/lib/firebase";
@@ -105,10 +106,15 @@ export async function getStories(): Promise<Story[]> {
     const storySnapshot = await getDocs(storiesCol);
     const storyList = storySnapshot.docs.map(doc => {
         const data = doc.data();
-        return {
-            id: doc.id,
+        // Convert Firestore Timestamps to serializable ISO strings
+        const plainData = {
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+            updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+        }
+        return {
+            id: doc.id,
+            ...plainData,
         } as Story;
     });
     return storyList;
