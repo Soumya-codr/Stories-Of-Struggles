@@ -10,7 +10,8 @@ import {
     onSnapshot,
     Timestamp,
 } from "firebase/firestore";
-import { getAllUsers, type User } from "@/services/stories";
+import { getUsersForChats, type Chat } from "@/services/chat";
+import type { User } from "@/services/stories";
 import type { ChatWithParticipants, Message } from "@/services/chat";
 
 /**
@@ -19,36 +20,31 @@ import type { ChatWithParticipants, Message } from "@/services/chat";
  */
 export function streamChatsForUser(userId: string, callback: (chats: ChatWithParticipants[]) => void): () => void {
     const chatCollection = collection(db, 'chats');
-    // NOTE: Removing the orderBy clause to prevent the index error.
-    // Chats will not be sorted by the most recent message.
     const q = query(
         chatCollection, 
-        where('participantIds', 'array-contains', userId)
+        where('participantIds', 'array-contains', userId),
+        orderBy('lastMessageTimestamp', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        // Fetch all users once to avoid multiple reads inside the loop
-        const allUsers = await getAllUsers();
-        const userMap = new Map(allUsers.map(u => [u.id, u]));
+        const chats = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
+        
+        // Fetch all necessary user profiles in a single, client-safe batch
+        const userMap = await getUsersForChats(chats);
 
-        const chatsData: ChatWithParticipants[] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const participantIds = data.participantIds || [];
-
-            const participants = participantIds
-                .map((pId: string) => userMap.get(pId))
-                .filter((user: User | undefined): user is User => !!user);
+        const chatsWithParticipants: ChatWithParticipants[] = chats.map(chat => {
+            const participants = chat.participantIds
+                .map(id => userMap.get(id))
+                .filter((user): user is User => !!user);
             
             return {
-                id: doc.id,
-                participantIds,
+                ...chat,
                 participants,
-                lastMessage: data.lastMessage,
-                lastMessageTimestamp: data.lastMessageTimestamp,
             } as ChatWithParticipants;
         });
 
-        callback(chatsData);
+        callback(chatsWithParticipants);
+
     }, (error) => {
         console.error("Error listening to chats:", error);
     });

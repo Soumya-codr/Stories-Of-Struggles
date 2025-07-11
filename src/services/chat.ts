@@ -16,7 +16,8 @@ import {
     getDoc,
     setDoc,
     onSnapshot,
-    limit
+    limit,
+    collectionGroup
 } from "firebase/firestore";
 import type { User } from "./stories";
 
@@ -101,4 +102,33 @@ export async function sendMessage(chatId: string, senderId: string, text: string
         console.error("Error sending message:", error);
         throw new Error("Failed to send message.");
     }
+}
+
+/**
+ * Client-safe function to get all users involved in a list of chats.
+ * This is designed to be called from the client-side chat listener.
+ */
+export async function getUsersForChats(chats: Chat[]): Promise<Map<string, User>> {
+    const userIds = new Set<string>();
+    chats.forEach(chat => {
+        chat.participantIds.forEach(id => userIds.add(id));
+    });
+
+    const userMap = new Map<string, User>();
+    if (userIds.size === 0) {
+        return userMap;
+    }
+
+    const usersQuery = query(collection(db, 'users'), where('__name__', 'in', Array.from(userIds)));
+    
+    try {
+        const querySnapshot = await getDocs(usersQuery);
+        querySnapshot.forEach(doc => {
+            userMap.set(doc.id, { id: doc.id, ...doc.data() } as User);
+        });
+    } catch (e) {
+        console.error("Error fetching users for chats:", e);
+    }
+
+    return userMap;
 }

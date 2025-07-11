@@ -140,26 +140,13 @@ export async function getStoryById(id: string): Promise<Story | null> {
     }
 }
 
-let usersCache: User[] | null = null;
 
-// This function is now isomorphic (runs on server and client)
+// This function is intended for server-side use or where broad access is needed.
+// For client-side chat, a more specific function is used.
 export async function getAllUsers(): Promise<User[]> {
-    // If running on the server and cache is available, return it.
-    if (typeof window === 'undefined' && usersCache) {
-        return usersCache;
-    }
-    
-    // On the client, or on the server for the first time, fetch from Firestore.
     const usersCol = collection(db, 'users');
     const userSnapshot = await getDocs(usersCol);
-    const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-    
-    // Cache the result only on the server
-    if (typeof window === 'undefined') {
-      usersCache = userList;
-    }
-    
-    return userList;
+    return userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 }
 
 export async function getUserByUsername(username: string): Promise<User | null> {
