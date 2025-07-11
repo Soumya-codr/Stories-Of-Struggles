@@ -28,9 +28,18 @@ import {
 import UserNav from '@/components/layout/user-nav'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/auth-context'
+import { Skeleton } from '../ui/skeleton'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
+
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
+
+  if (isAuthPage) {
+    return <main>{children}</main>;
+  }
 
   const navItems = [
     { href: '/', icon: Home, label: 'Home' },
@@ -135,7 +144,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="relative ml-auto flex-1 md:grow-0">
              {/* Could add a search bar here if needed */}
             </div>
-            <UserNav />
+             {loading ? <Skeleton className="h-8 w-8 rounded-full" /> : <UserNav />}
           </header>
           <main className="flex-1 p-4 sm:px-6 sm:py-0">{children}</main>
         </div>

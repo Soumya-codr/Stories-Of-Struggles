@@ -8,14 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getAllUsers, User, getCurrentUser } from '@/services/stories';
+import { getAllUsers, User } from '@/services/stories';
 import { createChat } from '@/services/chat';
 import { Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 
 export default function NewMessagePage() {
     const [users, setUsers] = useState<User[]>([]);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const { user: currentUser } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const router = useRouter();
@@ -23,20 +24,15 @@ export default function NewMessagePage() {
 
     useEffect(() => {
         async function loadData() {
-            const [allUsers, cUser] = await Promise.all([
-                getAllUsers(),
-                getCurrentUser()
-            ]);
-            setCurrentUser(cUser);
-            // Filter out the current user from the list
-            if (cUser) {
-              setUsers(allUsers.filter(user => user.id !== cUser.id));
+            const allUsers = await getAllUsers();
+            if (currentUser) {
+              setUsers(allUsers.filter(user => user.id !== currentUser.id));
             } else {
               setUsers(allUsers);
             }
         }
         loadData();
-    }, []);
+    }, [currentUser]);
 
     const handleCreateChat = async (userId: string) => {
         if (!currentUser || isCreating) return;

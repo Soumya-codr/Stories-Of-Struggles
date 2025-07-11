@@ -2,14 +2,19 @@
 'use server';
 
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query, where, writeBatch } from "firebase/firestore";
+import { getAuth } from 'firebase/auth';
+import { app } from '@/lib/firebase';
+import { getAuthenticatedUser } from "@/lib/firebase-helpers";
+
 
 // This defines the shape of a user object.
 // We export it so it can be used in other parts of the app.
 export type User = {
-    id: string;
+    id: string; // This will be the Firebase Auth UID
     name: string;
     username: string;
+    email: string;
     avatarUrl: string;
     bio?: string;
     website?: string;
@@ -19,10 +24,9 @@ export type User = {
 
 // NOTE: This is a placeholder for the real user data
 // In a real app, you would get this from your authentication system
-export const getCurrentUser = async (): Promise<User> => {
-    // For now, we'll return the 'developer' user by default.
-    const user = await getUserByUsername('developer');
-    return user!;
+export const getCurrentUser = async (): Promise<User | null> => {
+    // This now gets the real authenticated user
+    return getAuthenticatedUser();
 };
 
 export async function createStory(data: any) {
@@ -113,66 +117,43 @@ export async function getStoryById(id: string) {
     }
 }
 
-// NOTE: This is a placeholder user database.
-// In a real app, you would have a 'users' collection in Firestore.
-const placeholderUsers: User[] = [
-    {
-      id: 'user123',
-      name: 'Developer',
-      username: 'developer',
-      avatarUrl: 'https://placehold.co/128x128.png',
-      bio: 'This is your profile! Share your story, showcase your projects, and connect with other developers.',
-      website: 'https://example.com',
-      followers: 10,
-      following: 25,
-    },
-     {
-      id: 'alexdoe456',
-      name: 'Alex Doe',
-      username: 'alexdoe',
-      avatarUrl: 'https://placehold.co/128x128.png',
-      bio: 'Senior Software Engineer, passionate about open source, clean code, and building communities. Currently working on Project Phoenix.',
-      website: 'https://example.com',
-      followers: 482,
-      following: 120,
-    },
-    {
-        id: 'sarah',
-        name: 'Sarah',
-        username: 'sarah',
-        avatarUrl: 'https://placehold.co/128x128.png'
-    },
-    {
-        id: 'mike',
-        name: 'Mike',
-        username: 'mike',
-        avatarUrl: 'https://placehold.co/128x128.png'
-    }
-];
-
 let usersCache: User[] | null = null;
 
 export async function getAllUsers(): Promise<User[]> {
-    // This function returns all users from our placeholder data.
-    // In a real application, you would fetch this from your 'users' collection.
-    // We cache the results to avoid repeated lookups.
     if (usersCache) {
         return usersCache;
     }
-    // In a real app, this would be a Firestore query.
-    usersCache = placeholderUsers;
-    return usersCache;
+    
+    const usersCol = collection(db, 'users');
+    const userSnapshot = await getDocs(usersCol);
+    const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+    
+    usersCache = userList;
+    return userList;
 }
 
-
 export async function getUserByUsername(username: string): Promise<User | null> {
-    const users = await getAllUsers();
-    return users.find(u => u.username === username) || null;
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("username", "==", username));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return null;
+    }
+
+    const userDoc = querySnapshot.docs[0];
+    return { id: userDoc.id, ...userDoc.data() } as User;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-    const users = await getAllUsers();
-    return users.find(u => u.id === id) || null;
+    const userDocRef = doc(db, 'users', id);
+    const userSnapshot = await getDoc(userDocRef);
+
+    if (userSnapshot.exists()) {
+        return { id: userSnapshot.id, ...userSnapshot.data() } as User;
+    } else {
+        return null;
+    }
 }
 
 export async function getStoriesByUsername(username: string) {

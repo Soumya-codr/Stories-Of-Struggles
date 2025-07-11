@@ -8,10 +8,12 @@ import { notFound } from "next/navigation";
 import { getStoriesByUsername, getUserByUsername, getCurrentUser } from "@/services/stories";
 
 export default async function ProfilePage({ params }: { params: { username: string } }) {
+  // We can't know the current user on the server in this setup, so we fetch it on the client
+  // But for checking if the profile being viewed IS the current user, we can pass it down
   const [user, userProjects, currentUser] = await Promise.all([
     getUserByUsername(params.username),
     getStoriesByUsername(params.username),
-    getCurrentUser()
+    getCurrentUser() // This will be null if not logged in
   ]);
 
   if (!user) {

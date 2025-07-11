@@ -9,15 +9,15 @@ import { cn } from "@/lib/utils"
 import { MessageSquare, PlusCircle, Send } from "lucide-react"
 import { useEffect, useState, useRef } from "react";
 import type { User } from "@/services/stories";
-import { getCurrentUser } from "@/services/stories";
 import type { ChatWithParticipants, Message } from "@/services/chat";
 import { sendMessage } from "@/services/chat";
 import { streamChatsForUser, streamMessagesForChat } from "@/lib/chat-listeners";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
 
 export default function MessagesPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth();
   const [chats, setChats] = useState<ChatWithParticipants[]>([]);
   const [activeChat, setActiveChat] = useState<ChatWithParticipants | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -26,34 +26,25 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // 1. Fetch current user
-  useEffect(() => {
-    getCurrentUser().then(setCurrentUser);
-  }, []);
-
-  // 2. Set up real-time listener for user's chats
+  // 1. Set up real-time listener for user's chats
   useEffect(() => {
     if (currentUser?.id) {
-      // The stream function returns an unsubscribe function
       const unsubscribe = streamChatsForUser(currentUser.id, setChats);
-      // Cleanup on component unmount
       return () => unsubscribe();
     }
   }, [currentUser]);
 
-  // 3. Set up real-time listener for messages in the active chat
+  // 2. Set up real-time listener for messages in the active chat
   useEffect(() => {
     if (activeChat?.id) {
-      // The stream function returns an unsubscribe function
       const unsubscribe = streamMessagesForChat(activeChat.id, setMessages);
-      // Cleanup on component unmount or when activeChat changes
       return () => unsubscribe();
     } else {
-      setMessages([]); // Clear messages when no chat is active
+      setMessages([]);
     }
   }, [activeChat]);
 
-  // 4. Scroll to bottom when new messages arrive
+  // 3. Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -99,7 +90,7 @@ export default function MessagesPage() {
               {chats.length > 0 ? (
                 chats.map((chat) => {
                   const otherUser = getOtherParticipant(chat);
-                  if (!otherUser) return null; // Don't render chat if other user is not found
+                  if (!otherUser) return null;
 
                   return (
                   <button
@@ -152,7 +143,7 @@ export default function MessagesPage() {
                                   <p>{msg.text}</p>
                                   <p className="text-xs text-right mt-1 opacity-70">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                 </div>
-                              {isOwn && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback></Avatar>}
+                              {isOwn && sender && <Avatar className="h-8 w-8"><AvatarImage src={sender.avatarUrl} /><AvatarFallback>{sender.name.charAt(0)}</AvatarFallback></Avatar>}
                             </div>
                           )
                       })}
