@@ -142,16 +142,23 @@ export async function getStoryById(id: string): Promise<Story | null> {
 
 let usersCache: User[] | null = null;
 
+// This function is now isomorphic (runs on server and client)
 export async function getAllUsers(): Promise<User[]> {
-    if (usersCache) {
+    // If running on the server and cache is available, return it.
+    if (typeof window === 'undefined' && usersCache) {
         return usersCache;
     }
     
+    // On the client, or on the server for the first time, fetch from Firestore.
     const usersCol = collection(db, 'users');
     const userSnapshot = await getDocs(usersCol);
     const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
     
-    usersCache = userList;
+    // Cache the result only on the server
+    if (typeof window === 'undefined') {
+      usersCache = userList;
+    }
+    
     return userList;
 }
 
