@@ -65,23 +65,24 @@ export default function MessagesPage() {
 
   // 2. Set up real-time listener for chats when initial data is loaded
   useEffect(() => {
-    if (!initialDataLoaded || !currentUser) return;
+    if (!initialDataLoaded || !currentUser?.id) return;
 
     const chatCollection = collection(db, 'chats');
-    // NOTE: This query requires a composite index in Firestore.
-    // The error message in the console will provide a direct link to create it.
     const q = query(chatCollection, where('participantIds', 'array-contains', currentUser.id), orderBy('lastMessageTimestamp', 'desc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const chatsData = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            const participants: User[] = data.participantIds
+            // Defensive check for participant IDs
+            const validParticipantIds = (data.participantIds || []).filter(Boolean);
+
+            const participants: User[] = validParticipantIds
                 .map((pId: string) => allUsers.get(pId))
                 .filter((user: User | undefined): user is User => user !== undefined);
             
             return {
                 id: doc.id,
-                participantIds: data.participantIds,
+                participantIds: validParticipantIds,
                 participants: participants,
                 lastMessage: data.lastMessage,
                 lastMessageTimestamp: (data.lastMessageTimestamp as Timestamp)?.toDate().toISOString(),
@@ -92,7 +93,6 @@ export default function MessagesPage() {
       console.error("Error in chat listener:", error);
     });
 
-    // Clean up the listener when the component unmounts or dependencies change
     return () => unsubscribe();
   }, [initialDataLoaded, currentUser, allUsers]);
 
@@ -124,7 +124,6 @@ export default function MessagesPage() {
         setNewMessage("");
     } catch (error) {
         console.error("Failed to send message:", error);
-        // Optionally, show a toast notification for the error
     }
   };
   
