@@ -12,7 +12,8 @@ import {
     where,
     orderBy,
     updateDoc,
-    Timestamp
+    Timestamp,
+    getDoc
 } from "firebase/firestore";
 import { User, getAllUsers } from "./stories";
 
@@ -38,12 +39,9 @@ export async function createChat(user1Id: string, user2Id: string): Promise<stri
     
     // To prevent duplicate chats, create a consistent ID from the two user IDs
     const sortedIds = [user1Id, user2Id].sort();
-    const existingChatQuery = query(
-      chatCollection, 
-      where('participantIds', '==', sortedIds)
-    );
+    const q = query(chatCollection, where('participantIds', '==', sortedIds));
 
-    const querySnapshot = await getDocs(existingChatQuery);
+    const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
         // Chat already exists
@@ -53,13 +51,13 @@ export async function createChat(user1Id: string, user2Id: string): Promise<stri
     // If no chat exists, create a new one
     const newChatRef = await addDoc(chatCollection, {
         participantIds: sortedIds,
-        lastMessage: "Chat created",
-        lastMessageTimestamp: Timestamp.now(), // Use Timestamp.now() for consistency
+        lastMessage: "Chat created.",
+        // Ensure the timestamp field always exists, even on creation.
+        lastMessageTimestamp: Timestamp.now(), 
     });
 
     return newChatRef.id;
 }
-
 
 // Function to get all chats for a specific user (Not used on the main messages page, but good for reference)
 export async function getChatsForUser(userId: string): Promise<Chat[]> {
@@ -109,6 +107,6 @@ export async function sendMessage(chatId: string, senderId: string, text: string
     const chatDocRef = doc(db, 'chats', chatId);
     await updateDoc(chatDocRef, {
         lastMessage: text,
-        lastMessageTimestamp: Timestamp.now(), // Use Timestamp.now() for consistency
+        lastMessageTimestamp: serverTimestamp(),
     });
 }
