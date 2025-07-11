@@ -18,14 +18,16 @@ export default function ProfilePage({ params }: { params: { username: string } }
   const [userProjects, setUserProjects] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
+  const { username } = params;
 
   useEffect(() => {
     async function fetchData() {
+      if (!username) return;
       try {
         setLoading(true);
         const [fetchedUser, fetchedProjects] = await Promise.all([
-          getUserByUsername(params.username),
-          getStoriesByUsername(params.username),
+          getUserByUsername(username),
+          getStoriesByUsername(username),
         ]);
 
         if (!fetchedUser) {
@@ -42,7 +44,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
       }
     }
     fetchData();
-  }, [params.username]);
+  }, [username]);
 
 
   if (loading) {
