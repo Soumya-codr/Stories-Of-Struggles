@@ -23,7 +23,7 @@ export function streamChatsForUser(userId: string, callback: (chats: ChatWithPar
     const q = query(
         chatCollection, 
         where('participantIds', 'array-contains', userId),
-        orderBy('lastMessageTimestamp', 'desc')
+        orderBy('lastMessageTimestamp', 'asc')
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
@@ -43,7 +43,7 @@ export function streamChatsForUser(userId: string, callback: (chats: ChatWithPar
             } as ChatWithParticipants;
         });
 
-        callback(chatsWithParticipants);
+        callback(chatsWithParticipants.reverse()); // Reverse the array to show newest first
 
     }, (error) => {
         console.error("Error listening to chats:", error);
