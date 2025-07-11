@@ -1,22 +1,36 @@
-
-import { auth, db } from './firebase';
+import { db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { User } from '@/services/stories';
+import { getAuth } from 'firebase-admin/auth';
+import { initAdminApp } from './firebase-admin';
+import { cookies } from 'next/headers';
 
 // This is a server-side helper function to get the currently authenticated user.
 // It's not a server action, so it doesn't need 'use server'.
 export async function getAuthenticatedUser(): Promise<User | null> {
-  const firebaseUser = auth.currentUser;
-  if (!firebaseUser) {
+  await initAdminApp();
+  const cookieStore = cookies();
+  const token = cookieStore.get('firebaseIdToken')?.value;
+
+  if (!token) {
     return null;
   }
 
-  const userDocRef = doc(db, 'users', firebaseUser.uid);
-  const userDoc = await getDoc(userDocRef);
+  try {
+    const decodedToken = await getAuth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+    
+    const userDocRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userDocRef);
 
-  if (userDoc.exists()) {
-    return { id: userDoc.id, ...userDoc.data() } as User;
+    if (userDoc.exists()) {
+      return { id: userDoc.id, ...userDoc.data() } as User;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error verifying token or fetching user:", error);
+    // Token might be expired or invalid
+    return null;
   }
-
-  return null;
 }
