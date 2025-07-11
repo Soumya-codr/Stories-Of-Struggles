@@ -19,13 +19,11 @@ import type { ChatWithParticipants, Message } from "@/services/chat";
  */
 export function streamChatsForUser(userId: string, callback: (chats: ChatWithParticipants[]) => void): () => void {
     const chatCollection = collection(db, 'chats');
-    // NOTE: This query requires a composite index in Firestore.
-    // The error message in the browser console will provide a direct link to create it.
-    // The index should be: `participantIds` (array-contains) and `lastMessageTimestamp` (descending).
+    // NOTE: Removing the orderBy clause to prevent the index error.
+    // Chats will not be sorted by the most recent message.
     const q = query(
         chatCollection, 
-        where('participantIds', 'array-contains', userId), 
-        orderBy('lastMessageTimestamp', 'desc')
+        where('participantIds', 'array-contains', userId)
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
@@ -53,8 +51,6 @@ export function streamChatsForUser(userId: string, callback: (chats: ChatWithPar
         callback(chatsData);
     }, (error) => {
         console.error("Error listening to chats:", error);
-        // If there's an error (e.g., missing index), you can handle it here.
-        // The most common error is a "failed-precondition" which means the index is missing.
     });
 
     return unsubscribe; // Return the unsubscribe function
