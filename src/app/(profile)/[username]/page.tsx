@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import ProjectCard from "@/components/projects/project-card";
 import { Mail, Link as LinkIcon, Edit } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getStoriesByUsername, getUserByUsername, User, Story } from "@/services/stories";
 import { useAuth } from "@/context/auth-context";
 import { useEffect, useState } from "react";
@@ -18,6 +18,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
   const [userProjects, setUserProjects] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
+  const router = useRouter();
   
   useEffect(() => {
     // Correctly access params inside the useEffect hook
@@ -33,7 +34,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
         ]);
 
         if (!fetchedUser) {
-          notFound();
+          router.push('/');
           return;
         }
         setUser(fetchedUser);
@@ -46,7 +47,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
       }
     }
     fetchData();
-  }, [params.username]); // Use params.username as the dependency
+  }, [params.username, router]); // Use params.username as the dependency
 
 
   if (loading) {
@@ -76,8 +77,8 @@ export default function ProfilePage({ params }: { params: { username: string } }
   }
 
   if (!user) {
-    // This will be caught by notFound() in useEffect, but as a fallback
-    return notFound();
+    // This will be caught by router.push('/') in useEffect, but as a fallback
+    return null;
   }
 
   const isCurrentUser = user.username === currentUser?.username;
